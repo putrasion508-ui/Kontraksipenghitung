@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Pencatat Kontraksi</title>
+<meta name="theme-color" content="#b5645f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Kontraksi">
+<style>
+  :root{
+    --bg:#fbf7f2; --ink:#2d2a26; --muted:#8a8178;
+    --rose:#d98a8a; --rose-deep:#b5645f;
+    --sage:#7c9a82; --sage-deep:#5c7a62;
+    --amber:#d9a441; --line:#e8ddd2; --card:#ffffff;
+    --shadow:0 6px 24px rgba(120,90,70,.10);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;
+    background:var(--bg); color:var(--ink); min-height:100vh; line-height:1.5;
+    padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom);
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:18px 16px 120px;}
+  header{text-align:center;padding:8px 0 4px;}
+  header h1{font-size:1.45rem;margin:0;letter-spacing:.3px;font-weight:600;}
+  header p{margin:4px 0 0;color:var(--muted);font-size:.86rem;font-family:'Helvetica Neue',Arial,sans-serif;}
+
+  .live{background:var(--card);border-radius:22px;padding:22px 18px;box-shadow:var(--shadow);
+    margin-top:16px;text-align:center;border:1px solid var(--line);}
+  .live .label{font-family:'Helvetica Neue',Arial,sans-serif;text-transform:uppercase;
+    letter-spacing:2px;font-size:.66rem;color:var(--muted);margin-bottom:6px;}
+  .timer{font-size:3.4rem;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:1px;margin:2px 0;}
+  .timer.idle{color:var(--muted);} .timer.active{color:var(--rose-deep);}
+
+  .bigbtn{width:100%;border:none;border-radius:18px;padding:24px;margin-top:16px;
+    font-size:1.3rem;font-weight:600;font-family:'Helvetica Neue',Arial,sans-serif;letter-spacing:.5px;
+    color:#fff;cursor:pointer;transition:transform .08s ease,background .2s;box-shadow:var(--shadow);}
+  .bigbtn:active{transform:scale(.97);}
+  .bigbtn.start{background:linear-gradient(135deg,var(--sage),var(--sage-deep));}
+  .bigbtn.stop{background:linear-gradient(135deg,var(--rose),var(--rose-deep));}
+
+  .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:16px;}
+  .stat{background:var(--card);border-radius:16px;padding:14px 8px;text-align:center;border:1px solid var(--line);}
+  .stat .v{font-size:1.25rem;font-weight:600;font-variant-numeric:tabular-nums;}
+  .stat .k{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.64rem;text-transform:uppercase;
+    letter-spacing:1px;color:var(--muted);margin-top:3px;}
+
+  .banner{margin-top:16px;border-radius:16px;padding:16px;font-family:'Helvetica Neue',Arial,sans-serif;
+    font-size:.9rem;display:flex;gap:12px;align-items:flex-start;border:1px solid transparent;}
+  .banner .dot{width:12px;height:12px;border-radius:50%;margin-top:5px;flex:none;}
+  .banner.early{background:#f3f6f1;border-color:#dde7dc;} .banner.early .dot{background:var(--sage);}
+  .banner.active-l{background:#fdf6e9;border-color:#f0e2c4;} .banner.active-l .dot{background:var(--amber);}
+  .banner.go{background:#fbeceb;border-color:#f3d2cf;} .banner.go .dot{background:var(--rose-deep);}
+  .banner b{display:block;margin-bottom:2px;font-size:.95rem;} .banner span{color:var(--muted);}
+
+  .hosp{margin-top:18px;display:none;}
+  .hosp.show{display:block;animation:rise .4s ease;}
+  @keyframes rise{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+  .hosp h2{font-size:1.05rem;margin:0 0 4px;}
+  .hosp .sub{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.78rem;color:var(--muted);margin-bottom:12px;}
+  .hcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow);}
+  .hcard .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .hcard .nm{font-weight:600;font-size:1rem;}
+  .hcard .km{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.78rem;color:var(--sage-deep);font-weight:600;white-space:nowrap;}
+  .hcard .tag{display:inline-block;font-family:'Helvetica Neue',Arial,sans-serif;font-size:.64rem;
+    text-transform:uppercase;letter-spacing:.8px;background:#f3f6f1;color:var(--sage-deep);padding:3px 8px;border-radius:20px;margin:6px 0 8px;}
+  .hcard .acts{display:flex;gap:8px;}
+  .hcard a{flex:1;text-align:center;text-decoration:none;border-radius:12px;padding:11px;
+    font-family:'Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:.85rem;}
+  .hcard a.call{background:var(--rose-deep);color:#fff;} .hcard a.nav{background:#eef2ed;color:var(--sage-deep);}
+
+  .hist{margin-top:22px;}
+  .hist h2{font-size:1.05rem;margin:0 0 10px;display:flex;justify-content:space-between;align-items:center;}
+  .hist h2 .tools{display:flex;gap:6px;}
+  .hist h2 button{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.72rem;background:none;
+    border:1px solid var(--line);border-radius:20px;padding:5px 12px;color:var(--muted);cursor:pointer;}
+  table{width:100%;border-collapse:collapse;font-family:'Helvetica Neue',Arial,sans-serif;}
+  th{font-size:.62rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);text-align:right;
+    padding:6px 4px;border-bottom:1px solid var(--line);font-weight:600;}
+  th:first-child{text-align:left;}
+  td{font-size:.86rem;padding:9px 4px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;}
+  td:first-child{text-align:left;color:var(--muted);}
+  .empty{text-align:center;color:var(--muted);font-family:'Helvetica Neue',Arial,sans-serif;font-size:.85rem;padding:24px 0;}
+  .disc{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.7rem;color:var(--muted);text-align:center;margin-top:26px;line-height:1.6;}
+  /* klasifikasi pola */
+  .pattern{margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow);}
+  .pTop{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .pName{font-weight:600;font-size:1.05rem;}
+  .pBadge{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.64rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:.8px;padding:4px 10px;border-radius:20px;background:#eee;color:#777;white-space:nowrap;}
+  .pBadge.b-false{background:#eef2ed;color:var(--sage-deep);}
+  .pBadge.b-early{background:#f3f6f1;color:var(--sage-deep);}
+  .pBadge.b-active{background:#fdf6e9;color:#9a6f17;}
+  .pBadge.b-trans{background:#fbeceb;color:var(--rose-deep);}
+  .pDesc{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.82rem;color:var(--muted);margin:8px 0 12px;line-height:1.55;}
+  .pMeter{height:8px;border-radius:8px;background:linear-gradient(90deg,#dde7dc,#e9efd8,#f3e3bf,#f3d2cf);overflow:visible;position:relative;}
+  .pMeterFill{position:absolute;top:-3px;width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--rose-deep);
+    left:0%;transition:left .5s ease;box-shadow:0 2px 6px rgba(0,0,0,.15);}
+  .pScale{display:flex;justify-content:space-between;margin-top:6px;font-family:'Helvetica Neue',Arial,sans-serif;
+    font-size:.6rem;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);}
+
+  /* cek mandiri */
+  .selfcheck{margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow);}
+  .scHead{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.8rem;font-weight:600;margin-bottom:10px;}
+  .scHead span{color:var(--muted);font-weight:400;}
+  .scItem{width:100%;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;
+    background:#faf6f0;border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-bottom:8px;cursor:pointer;
+    font-family:'Helvetica Neue',Arial,sans-serif;font-size:.82rem;color:var(--ink);}
+  .scItem .scState{flex:none;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:.8rem;font-weight:700;background:#eee;color:#888;}
+  .scItem.yes .scState{background:var(--rose-deep);color:#fff;}
+  .scItem.no .scState{background:var(--sage-deep);color:#fff;}
+  .scHint{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.7rem;color:var(--muted);margin-top:2px;}
+
+  /* tanda bahaya */
+  .danger{margin-top:12px;background:#fdf0ef;border:1px solid #f0cdc9;border-radius:16px;padding:14px 16px;}
+  .dHead{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.82rem;font-weight:700;color:var(--rose-deep);line-height:1.5;}
+  .dList{margin:10px 0 8px;padding-left:18px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:.8rem;color:var(--ink);line-height:1.6;}
+  .dList li{margin-bottom:4px;}
+  .dNote{font-family:'Helvetica Neue',Arial,sans-serif;font-size:.74rem;color:var(--muted);border-top:1px solid #f0cdc9;padding-top:8px;}
+  .dNote b{color:var(--rose-deep);}
+
+  .hospRefresh{width:100%;margin-top:4px;background:#eef2ed;color:var(--sage-deep);border:none;border-radius:12px;
+    padding:11px;font-family:'Helvetica Neue',Arial,sans-serif;font-weight:600;font-size:.82rem;cursor:pointer;}
+
+  input[type=file]{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Pencatat Kontraksi</h1>
+    <p>Tekan tombol saat kontraksi mulai &amp; berhenti</p>
+  </header>
+
+  <div class="live">
+    <div class="label" id="liveLabel">Belum mulai</div>
+    <div class="timer idle" id="timer">00:00</div>
+  </div>
+
+  <button class="bigbtn start" id="mainBtn">Mulai Kontraksi</button>
+
+  <div class="stats">
+    <div class="stat"><div class="v" id="avgDur">–</div><div class="k">Rata Durasi</div></div>
+    <div class="stat"><div class="v" id="avgFreq">–</div><div class="k">Rata Jeda</div></div>
+    <div class="stat"><div class="v" id="count">0</div><div class="k">Total (1 jam)</div></div>
+  </div>
+
+  <div class="banner early" id="banner">
+    <div class="dot"></div>
+    <div><b id="bTitle">Mulai mencatat</b><span id="bText">Catat beberapa kontraksi agar pola bisa dianalisis.</span></div>
+  </div>
+
+  <!-- Klasifikasi pola -->
+  <div class="pattern" id="pattern">
+    <div class="pTop">
+      <span class="pName" id="pName">Pola belum jelas</span>
+      <span class="pBadge" id="pBadge">–</span>
+    </div>
+    <div class="pDesc" id="pDesc">Catat minimal 3–4 kontraksi berturut-turut agar pola bisa dikenali.</div>
+    <div class="pMeter"><div class="pMeterFill" id="pMeterFill"></div></div>
+    <div class="pScale">
+      <span>Palsu</span><span>Awal</span><span>Aktif</span><span>Transisi</span>
+    </div>
+  </div>
+
+  <!-- Cek mandiri (hal yang tak bisa dideteksi sensor) -->
+  <div class="selfcheck" id="selfcheck">
+    <div class="scHead">Cek mandiri <span>(hal yang tak bisa diukur app)</span></div>
+    <button class="scItem" data-k="reda"><span>Mereda saat istirahat / ganti posisi / minum air?</span><b class="scState">?</b></button>
+    <button class="scItem" data-k="punggung"><span>Nyeri mulai dari punggung lalu menjalar ke depan?</span><b class="scState">?</b></button>
+    <button class="scItem" data-k="kuat"><span>Nyeri makin lama makin kuat (tak bisa diajak bicara)?</span><b class="scState">?</b></button>
+    <div class="scHint" id="scHint">Ketuk untuk jawab Ya / Tidak. Jawaban melengkapi analisis pola.</div>
+  </div>
+
+  <!-- Tanda bahaya: SELALU tampil -->
+  <div class="danger">
+    <div class="dHead">⚠ Langsung ke RS / hubungi bidan — TANPA peduli pola kontraksi, bila ada:</div>
+    <ul class="dList">
+      <li>Ketuban pecah (air keluar dari jalan lahir), apalagi bila keruh/kehijauan</li>
+      <li>Perdarahan dari jalan lahir (bukan sekadar lendir bercampur darah)</li>
+      <li>Gerakan janin berkurang drastis atau berhenti</li>
+      <li>Nyeri kepala hebat, pandangan kabur, atau bengkak mendadak</li>
+      <li>Nyeri perut hebat yang terus-menerus (tidak hilang di antara kontraksi)</li>
+      <li>Demam, kejang, atau Anda merasa ada yang sangat tidak beres</li>
+      <li>Usia kehamilan belum cukup bulan (&lt;37 minggu) tapi kontraksi teratur</li>
+      <li>Riwayat operasi caesar / komplikasi — ikuti instruksi dokter Anda</li>
+    </ul>
+    <div class="dNote">Instruksi spesifik dari bidan/dokter Anda <b>selalu mengalahkan</b> aturan umum app ini.</div>
+  </div>
+
+  <div class="hosp" id="hosp">
+    <h2>Rumah Sakit Terdekat</h2>
+    <div class="sub" id="hospSub">Mencari lokasi Anda…</div>
+    <div id="hospList"></div>
+    <button class="hospRefresh" id="hospRefresh">Perbarui lokasi &amp; cari ulang</button>
+  </div>
+
+  <div class="hist">
+    <h2>Riwayat
+      <span class="tools">
+        <button id="exportBtn">Backup</button>
+        <button id="importBtn">Pulihkan</button>
+        <button id="resetBtn">Reset</button>
+      </span>
+    </h2>
+    <table>
+      <thead><tr><th>Mulai</th><th>Durasi</th><th>Jeda</th></tr></thead>
+      <tbody id="histBody"><tr><td colspan="3" class="empty">Belum ada catatan</td></tr></tbody>
+    </table>
+  </div>
+  <input type="file" id="importFile" accept="application/json">
+
+  <p class="disc">Aturan 5-1-1: kontraksi tiap ±5 menit, berlangsung ±1 menit, selama ±1 jam &rarr; saatnya ke RS. Alat bantu ini bukan pengganti nasihat medis. Saat ragu, hubungi bidan/dokter Anda.</p>
+</div>
+
+<script>
+/* ---- Storage shim: pakai window.storage (artifact Claude) bila ada,
+       selain itu fallback ke localStorage agar app jalan saat di-host sendiri ---- */
+if (typeof window.storage === 'undefined') {
+  const PFX = 'ct_';
+  window.storage = {
+    async get(key){ const v = localStorage.getItem(PFX+key); return v===null ? null : {key, value:v}; },
+    async set(key, value){ localStorage.setItem(PFX+key, value); return {key, value}; },
+    async delete(key){ localStorage.removeItem(PFX+key); return {key, deleted:true}; },
+    async list(prefix){
+      const keys=[]; const want = PFX+(prefix||'');
+      for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); if(k && k.startsWith(want)) keys.push(k.slice(PFX.length)); }
+      return {keys};
+    }
+  };
+}
+
+// ---- Daftar RS fallback (Bandung) dipakai bila GPS / Overpass gagal ----
+const ORIGIN_FALLBACK={lat:-6.950639624933762,lng:107.64537178061543}; // Buahbatu, Bandung
+const FALLBACK_HOSPITALS=[
+  {n:"RSIA Harapan Bunda",lat:-6.9559233,lng:107.661776,tel:"+62227506490",tag:"RS Ibu & Anak"},
+  {n:"Edelweiss Hospital",lat:-6.9437447,lng:107.6496471,tel:"+622286023000",tag:"RS Umum"},
+  {n:"Mayapada Hospital Bandung",lat:-6.9485808,lng:107.6347498,tel:"+62150770",tag:"RS Umum"},
+  {n:"RSIA Grha Bunda",lat:-6.9131302,lng:107.645485,tel:"+622287256789",tag:"RS Ibu & Anak"},
+  {n:"RSIA Limijati",lat:-6.9061276,lng:107.613634,tel:"+622244207770",tag:"RS Ibu & Anak"},
+  {n:"RS Santo Borromeus",lat:-6.8939955,lng:107.6136797,tel:"+62222552000",tag:"RS Umum"},
+  {n:"RS Bina Sehat",lat:-6.9858555,lng:107.624774,tel:"+62225207963",tag:"RS Umum"}
+];
+
+function haversine(a,b){
+  const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180;
+  const x=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
+}
+
+// Ambil posisi GPS realtime
+function getPosition(){
+  return new Promise((resolve,reject)=>{
+    if(!navigator.geolocation){reject(new Error('Geolocation tidak didukung'));return;}
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude}),
+      err=>reject(err),
+      {enableHighAccuracy:true, timeout:10000, maximumAge:60000}
+    );
+  });
+}
+
+// Query RS terdekat dari Overpass (OpenStreetMap). Radius bertahap.
+async function fetchHospitals(origin){
+  const ENDPOINTS=[
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter'
+  ];
+  for(const radius of [5000,10000,20000]){
+    const query=`[out:json][timeout:15];(node["amenity"="hospital"](around:${radius},${origin.lat},${origin.lng});way["amenity"="hospital"](around:${radius},${origin.lat},${origin.lng}););out center tags;`;
+    for(const ep of ENDPOINTS){
+      try{
+        const res=await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(query)});
+        if(!res.ok) continue;
+        const data=await res.json();
+        const list=(data.elements||[]).map(el=>{
+          const lat=el.lat ?? (el.center&&el.center.lat);
+          const lng=el.lon ?? (el.center&&el.center.lon);
+          if(lat==null||lng==null) return null;
+          const t=el.tags||{};
+          return {
+            n: t.name || t['name:id'] || t['name:en'] || 'Rumah Sakit',
+            lat, lng,
+            tel: (t.phone||t['contact:phone']||'').replace(/\s/g,''),
+            tag: /maternity|bersalin|ibu/i.test((t.name||'')+' '+(t.healthcare_speciality||'')) ? 'RS Ibu & Anak' : 'Rumah Sakit'
+          };
+        }).filter(Boolean);
+        if(list.length){
+          list.forEach(h=>h.km=haversine(origin,h));
+          list.sort((a,b)=>a.km-b.km);
+          return list.slice(0,8);
+        }
+      }catch(e){ /* coba endpoint/radius berikutnya */ }
+    }
+  }
+  return null; // gagal semua
+}
+
+// ---- State ----
+let contractions=[]; // {start, end}
+let running=false, startTs=0, tick=null;
+let hospRendered=false;
+
+const $=id=>document.getElementById(id);
+const fmt=s=>{const m=Math.floor(s/60),x=Math.floor(s%60);return String(m).padStart(2,'0')+":"+String(x).padStart(2,'0');};
+const fmtClock=ts=>{const d=new Date(ts);return String(d.getHours()).padStart(2,'0')+":"+String(d.getMinutes()).padStart(2,'0');};
+
+async function persist(){ await window.storage.set('contractions', JSON.stringify(contractions)); }
+async function persistRunning(){
+  if(running) await window.storage.set('running', JSON.stringify({startTs}));
+  else await window.storage.delete('running');
+}
+
+function mainClick(){
+  if(!running){
+    running=true; startTs=Date.now();
+    $('mainBtn').textContent="Berhenti"; $('mainBtn').className="bigbtn stop";
+    $('liveLabel').textContent="Kontraksi berlangsung";
+    $('timer').className="timer active";
+    startTick();
+    persistRunning();
+  }else{
+    running=false; clearInterval(tick);
+    contractions.push({start:startTs,end:Date.now()});
+    $('mainBtn').textContent="Mulai Kontraksi"; $('mainBtn').className="bigbtn start";
+    $('liveLabel').textContent="Istirahat";
+    $('timer').className="timer idle"; $('timer').textContent="00:00";
+    persist(); persistRunning(); render();
+  }
+}
+function startTick(){
+  clearInterval(tick);
+  tick=setInterval(()=>{$('timer').textContent=fmt((Date.now()-startTs)/1000);},200);
+  $('timer').textContent=fmt((Date.now()-startTs)/1000);
+}
+
+function render(){
+  const tb=$('histBody');
+  if(!contractions.length){tb.innerHTML='<tr><td colspan="3" class="empty">Belum ada catatan</td></tr>';}
+  else{
+    let rows='';
+    for(let i=contractions.length-1;i>=0;i--){
+      const c=contractions[i];
+      const dur=(c.end-c.start)/1000;
+      let jeda='–';
+      if(i>0){const g=(c.start-contractions[i-1].start)/1000; jeda=fmt(g);}
+      rows+=`<tr><td>${fmtClock(c.start)}</td><td>${fmt(dur)}</td><td>${jeda}</td></tr>`;
+    }
+    tb.innerHTML=rows;
+  }
+  const hourAgo=Date.now()-3600000;
+  const recent=contractions.filter(c=>c.start>=hourAgo);
+  $('count').textContent=recent.length;
+  $('avgDur').textContent = recent.length ? fmt(recent.reduce((s,c)=>s+(c.end-c.start),0)/recent.length/1000) : '–';
+  const last=contractions.slice(-7);
+  let gaps=[];
+  for(let i=1;i<last.length;i++)gaps.push((last[i].start-last[i-1].start)/1000);
+  $('avgFreq').textContent = gaps.length ? fmt(gaps.reduce((a,b)=>a+b,0)/gaps.length) : '–';
+  analyze(gaps.length?gaps.reduce((a,b)=>a+b,0)/gaps.length:0, recent);
+}
+
+// jawaban cek-mandiri: null=belum, true=ya, false=tidak
+let selfAns={reda:null, punggung:null, kuat:null};
+
+function median(arr){const a=[...arr].sort((x,y)=>x-y);const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;}
+
+function analyze(avgGap, recent){
+  // Kumpulkan metrik dari beberapa kontraksi terakhir
+  const last=contractions.slice(-8);
+  const gaps=[]; for(let i=1;i<last.length;i++) gaps.push((last[i].start-last[i-1].start)/1000);
+  const durs=last.map(c=>(c.end-c.start)/1000);
+  const medGap=gaps.length?median(gaps):Infinity;          // detik
+  const medDur=durs.length?median(durs):0;                 // detik
+  // Keteraturan: koefisien variasi jeda (kecil = teratur)
+  let regular=false, cv=1;
+  if(gaps.length>=2){
+    const mean=gaps.reduce((a,b)=>a+b,0)/gaps.length;
+    const sd=Math.sqrt(gaps.reduce((s,g)=>s+(g-mean)**2,0)/gaps.length);
+    cv=mean?sd/mean:1; regular = cv<=0.35;
+  }
+  // Tren merapat: paruh akhir vs awal
+  let tightening=false;
+  if(gaps.length>=4){
+    const h=Math.floor(gaps.length/2);
+    const a1=gaps.slice(0,h).reduce((a,b)=>a+b,0)/h;
+    const a2=gaps.slice(h).reduce((a,b)=>a+b,0)/(gaps.length-h);
+    tightening = a2 < a1*0.9;
+  }
+  const minDur=medDur/60;
+
+  // ---- Klasifikasi (gunakan menit untuk jeda) ----
+  const gMin=medGap/60;
+  let key, name, badge, desc, pos, banner, bTitle, bText, showHosp=false;
+
+  // Faktor cek-mandiri
+  const redaYes = selfAns.reda===true;     // mereda saat istirahat → arah palsu
+  const kuatYes = selfAns.kuat===true;     // makin kuat → arah asli
+
+  if(gaps.length<2){
+    key='unknown'; name='Pola belum jelas'; badge=['–','']; pos=2;
+    desc='Catat minimal 3–4 kontraksi berturut-turut agar pola bisa dikenali.';
+    banner='early'; bTitle='Mulai mencatat'; bText='Catat beberapa kontraksi agar pola bisa dianalisis.';
+  }
+  else if(gMin>=2 && gMin<=3 && medDur>=60 && regular){
+    key='trans'; name='Pola transisi'; badge=['Transisi','b-trans']; pos=92;
+    desc='Kontraksi sangat rapat (±2–3 mnt) dan panjang (±60–90 dtk). Ini fase menjelang dorongan. Anda seharusnya sudah di RS.';
+    banner='go'; bTitle='Ke rumah sakit SEKARANG'; bText='Pola transisi terdeteksi. Bila belum berangkat, berangkat segera & hubungi RS.'; showHosp=true;
+  }
+  else if(gMin<2 && medDur>=60 && regular){
+    key='trans'; name='Pola dorongan (kala 2)'; badge=['Mendesak','b-trans']; pos=100;
+    desc='Kontraksi sangat intens & nyaris terus-menerus. Ini darurat persalinan — butuh penolong segera.';
+    banner='go'; bTitle='DARURAT — segera ke RS / panggil bantuan'; bText='Bila ada dorongan mengejan, hubungi bidan/RS & jangan ditahan sendirian.'; showHosp=true;
+  }
+  else if(gMin<=5 && medDur>=45 && regular){
+    key='active'; name='Persalinan aktif'; badge=['Aktif','b-active']; pos=66;
+    desc='Kontraksi teratur tiap ±3–5 mnt, durasi ±45–60 dtk — pola 5-1-1. Ini waktunya menuju RS.';
+    banner='go'; bTitle='Saatnya ke rumah sakit'; bText='Pola persalinan aktif (5-1-1) terpenuhi. Hubungi RS/bidan & berangkat.'; showHosp=true;
+  }
+  else if(regular && (tightening || gMin<=12) && medDur>=30){
+    key='early'; name='Persalinan awal (latent)'; badge=['Awal','b-early']; pos=38;
+    desc='Kontraksi mulai teratur'+(tightening?' dan makin merapat':'')+' (±'+Math.round(gMin)+' mnt). Fase awal bisa lama — istirahat, makan ringan, hidrasi. Pantau terus.';
+    banner='active-l'; bTitle='Persalinan awal'; bText='Belum perlu berangkat bila tak ada tanda bahaya. Lanjut catat sampai mencapai 5-1-1.';
+  }
+  else {
+    // tidak teratur / tidak merapat → cenderung Braxton Hicks
+    key='false'; name='Cenderung kontraksi palsu'; badge=['Braxton Hicks','b-false']; pos=12;
+    desc='Kontraksi belum teratur'+(redaYes?' dan Anda merasa mereda saat istirahat':'')+'. Ciri kontraksi latihan (Braxton Hicks). Coba minum air, ganti posisi, istirahat — kontraksi palsu biasanya mereda.';
+    banner='early'; bTitle='Kemungkinan kontraksi palsu'; bText='Tetap pantau. Bila makin teratur, makin kuat, atau muncul tanda bahaya — hubungi bidan.';
+  }
+
+  // Penyesuaian dari cek-mandiri (tanpa pernah menurunkan tingkat kewaspadaan ke "aman")
+  if(key==='false' && kuatYes && selfAns.reda===false){
+    desc+=' Catatan: Anda menandai nyeri makin kuat & tidak mereda — meski pola belum teratur, tetap waspada & hubungi bidan bila ragu.';
+  }
+
+  // Render panel pola
+  $('pName').textContent=name;
+  const badgeEl=$('pBadge'); badgeEl.textContent=badge[0]; badgeEl.className='pBadge '+(badge[1]||'');
+  $('pDesc').textContent=desc;
+  $('pMeterFill').style.left='calc('+pos+'% - 7px)';
+
+  setBanner(banner,bTitle,bText,showHosp);
+}
+
+function setBanner(cls,title,text,showHosp){
+  const b=$('banner');
+  b.className='banner '+cls;
+  $('bTitle').textContent=title; $('bText').textContent=text;
+  if(showHosp){
+    $('hosp').classList.add('show');
+    if(!hospRendered){renderHosp();hospRendered=true;}
+  }else{
+    $('hosp').classList.remove('show');
+  }
+}
+
+let hospBusy=false;
+async function renderHosp(){
+  if(hospBusy) return; hospBusy=true;
+  const sub=$('hospSub'), listEl=$('hospList');
+  sub.textContent='Mendapatkan lokasi Anda…'; listEl.innerHTML='';
+  let origin=null, usedFallback=false, hospitals=null;
+  try{ origin=await getPosition(); }
+  catch(e){ origin=ORIGIN_FALLBACK; usedFallback=true; }
+
+  if(origin && !usedFallback){
+    sub.textContent='Mencari rumah sakit terdekat…';
+    try{ hospitals=await fetchHospitals(origin); }catch(e){ hospitals=null; }
+  }
+  if(!hospitals){
+    // Fallback: daftar Bandung, jarak dari origin (GPS bila ada, selain itu titik Bandung)
+    const base=origin||ORIGIN_FALLBACK;
+    hospitals=FALLBACK_HOSPITALS.map(h=>({...h,km:haversine(base,h)})).sort((a,b)=>a.km-b.km);
+    sub.textContent = usedFallback
+      ? 'Lokasi tidak aktif — menampilkan daftar RS Bandung. Aktifkan GPS lalu perbarui.'
+      : 'Data online tidak tersedia — menampilkan daftar RS Bandung (jarak dari lokasi Anda).';
+  }else{
+    sub.textContent='Diurutkan dari lokasi Anda saat ini. Periksa jam buka IGD sebelum berangkat.';
+  }
+
+  listEl.innerHTML=hospitals.map(h=>{
+    const maps=`https://www.google.com/maps/dir/?api=1&destination=${h.lat},${h.lng}&travelmode=driving`;
+    const km = (h.km!=null && isFinite(h.km)) ? `<span class="km">${h.km.toFixed(1)} km</span>` : '';
+    const call = h.tel ? `<a class="call" href="tel:${h.tel}">Telepon</a>` : '';
+    return `<div class="hcard">
+      <div class="top"><span class="nm">${h.n}</span>${km}</div>
+      <span class="tag">${h.tag||'Rumah Sakit'}</span>
+      <div class="acts">${call}<a class="nav" href="${maps}" target="_blank" rel="noopener">Rute</a></div>
+    </div>`;
+  }).join('');
+  hospBusy=false;
+}
+
+// ---- Backup / restore ----
+function exportData(){
+  const blob=new Blob([JSON.stringify({app:'pencatat-kontraksi',version:1,contractions},null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download='kontraksi-backup-'+new Date().toISOString().slice(0,10)+'.json';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+}
+$('importFile').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f)return;
+  try{
+    const data=JSON.parse(await f.text());
+    if(!Array.isArray(data.contractions)) throw new Error('Format tidak dikenali');
+    contractions=data.contractions;
+    await persist(); hospRendered=false; $('hosp').classList.remove('show'); render();
+    alert('Data berhasil dipulihkan ('+contractions.length+' kontraksi).');
+  }catch(err){ alert('Gagal memulihkan: '+err.message); }
+  e.target.value='';
+});
+
+$('mainBtn').addEventListener('click',mainClick);
+$('exportBtn').addEventListener('click',exportData);
+$('importBtn').addEventListener('click',()=>$('importFile').click());
+
+// Cek mandiri: ketuk siklus ? → Ya → Tidak → ?
+document.querySelectorAll('.scItem').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const k=btn.dataset.k;
+    const cur=selfAns[k];
+    let next, cls, label;
+    if(cur===null){next=true;cls='yes';label='Ya';}
+    else if(cur===true){next=false;cls='no';label='Tidak';}
+    else{next=null;cls='';label='?';}
+    selfAns[k]=next;
+    btn.className='scItem '+cls;
+    btn.querySelector('.scState').textContent=label;
+    render();
+  });
+});
+
+$('hospRefresh').addEventListener('click',()=>{ hospRendered=false; renderHosp().then(()=>hospRendered=true); });
+$('resetBtn').addEventListener('click',async ()=>{
+  if(confirm('Hapus semua catatan kontraksi?')){
+    contractions=[]; await persist(); hospRendered=false; $('hosp').classList.remove('show'); render();
+  }
+});
+
+async function init(){
+  try{
+    const saved=await window.storage.get('contractions');
+    if(saved && saved.value) contractions=JSON.parse(saved.value)||[];
+  }catch(e){ contractions=[]; }
+  // pulihkan kontraksi yang sedang berjalan bila app sempat tertutup
+  try{
+    const r=await window.storage.get('running');
+    let restored=false;
+    if(r && r.value){
+      const obj=JSON.parse(r.value);
+      if(obj && obj.startTs && (Date.now()-obj.startTs)<1800000){ // <30 mnt, anggap masih relevan
+        running=true; startTs=obj.startTs; restored=true;
+        $('mainBtn').textContent="Berhenti"; $('mainBtn').className="bigbtn stop";
+        $('liveLabel').textContent="Kontraksi berlangsung"; $('timer').className="timer active";
+        startTick();
+      }else{ await window.storage.delete('running'); }
+    }
+    if(!restored){
+      // pastikan tidak ada sisa state berjalan
+      running=false; clearInterval(tick);
+      $('mainBtn').textContent="Mulai Kontraksi"; $('mainBtn').className="bigbtn start";
+      $('liveLabel').textContent="Belum mulai"; $('timer').className="timer idle"; $('timer').textContent="00:00";
+    }
+  }catch(e){}
+  render();
+}
+init();
+
+/* Daftarkan service worker (hanya jika di-host via http/https, bukan file://) */
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
